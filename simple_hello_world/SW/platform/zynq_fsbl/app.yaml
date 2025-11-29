@@ -1,4 +1,0 @@
-domain_path: /home/kaz/work/github/seisyuu-hantatsushi/zynq/simple_hello_world/SW/platform/zynq_fsbl/zynq_fsbl_bsp
-app_src_dir: /home/kaz/tools/Xilinx/2025.2/Vitis/data/embeddedsw/lib/sw_apps/zynq_fsbl
-template: zynq_fsbl
-lang: c
