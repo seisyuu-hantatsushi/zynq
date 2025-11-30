@@ -19,9 +19,3 @@
 
 _ide/logs
 _ide/.wsdata
-
-export/
-hw/
-resources/
-ps7_cortexa9_0/
-zynq_fsbl/
