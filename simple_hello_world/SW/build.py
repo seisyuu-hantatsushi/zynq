@@ -6,7 +6,6 @@ WS = os.path.abspath("./")
 PLATFORM_NAME = "platform"
 APP_NAME = "hello_world"
 
-# これらは “$COMPONENT_LOCATION” を使わずに絶対パスで渡すのが安全
 XSA_PATH = os.path.abspath("../HW/hello_world/rk_simple_hw.xsa")
 
 # platform.xpfm は platform component 配下に生成される（既定の出力場所想定）
