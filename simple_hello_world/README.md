@@ -4,8 +4,10 @@
 2025.2
 
 ## Direcotry
+```
 HW/ HPFM(XSA Source code,Vivado)
 SW/ SPFM(Software,Vivado)
+```
 
 ## Software build on CLI
 ```sh
