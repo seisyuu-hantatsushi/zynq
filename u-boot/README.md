@@ -9,7 +9,7 @@ https://github.com/Xilinx/u-boot-xlnx
 $ cp uartonly/rk-zynq_uartonly_defconfig <u-boot-xlnx-path>/configs/
 $ cp uartonly/rk-zynq-uartonly.dts <u-boot-xlnx-path>/arch/arm/dts/
 ```
-2. load configuration
+2. load configuration and build
 ```
 $ cd  <u-boot-xlnx-path>
 $ source <xilinx-tool>/Vitis/settings64.sh
@@ -17,22 +17,19 @@ $ ARCH=arm CROSS_COMPILE=arm-none-eabi- make rk-zynq_uartonly_defconfig
 $ ARCH=arm CROSS_COMPILE=arm-none-eabi- make
 ```
 
-
 ## load u-boot by openocd
-1. call openocd
+1. call openocd  
 `openocd -f ft2232-cha-jtag.cfg -f /usr/share/openocd/scripts/target/zynq_7000.cfg `
-2. open port 4444 by telnet on another terminal.
+2. open port 4444 by telnet on another terminal.  
 `telnet localhost 4444`
-3. execute these commands
+3. execute these commands  
 ```
-set FSBL_ELF fsbl.elf
-set UBOOT_ELF u-boot.elf
-set BITSTREAM uart_only.bit
-set UBOOT_ENTRY 0x04000000 
-source load_uboot.tcl
+  set FSBL_ELF fsbl.elf
+  set UBOOT_ELF u-boot.elf
+  set BITSTREAM uart_only.bit
+  set UBOOT_ENTRY 0x04000000 
+  source load_uboot.tcl
 ```
-
-
 
 ### Example run
 ```
@@ -112,8 +109,9 @@ PL configured (pld load 0).
 ## How to build (vinila)
 1. `source <tool>/<version>/Vitis/settings64.sh`
 1. `ARCH=arm CROSS_COMPILE=arm-none-eabi- make xilinx_zynq_virt_defconfig`
-1. moditfy configuration `ARCH=arm CROSS_COMPILE=arm-none-eabi- make menuconfig`
+1. moditfy configuration  
+`ARCH=arm CROSS_COMPILE=arm-none-eabi- make menuconfig`
 
 ## References
-[2022年版U-bootの作り方](https://www.trenz.jp/tutorial/u-boot2022.html)
+[2022年版U-bootの作り方](https://www.trenz.jp/tutorial/u-boot2022.html)  
 [ユース ケース 3 - Git ソースからの U-boot の生成と運用](https://docs.amd.com/r/2024.2-%E6%97%A5%E6%9C%AC%E8%AA%9E/Vitis-Tutorials-Embedded-Software/%E3%83%A6%E3%83%BC%E3%82%B9-%E3%82%B1%E3%83%BC%E3%82%B9-3-Git-%E3%82%BD%E3%83%BC%E3%82%B9%E3%81%8B%E3%82%89%E3%81%AE-U-boot-%E3%81%AE%E7%94%9F%E6%88%90%E3%81%A8%E9%81%8B%E7%94%A8)
