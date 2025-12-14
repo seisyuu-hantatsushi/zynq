@@ -38,6 +38,8 @@ set(USER_COMPILE_SOURCES
 "xemac_adapter/xemac_adapter.c"
 "xemac_adapter/xemac_adapter_intf.c"
 "xemac_adapter/xemac_adapter_phy.c"
+"xemac_adapter/xemac_dma.c"
+"rtl8211f_phy.c"
 )
 
 # -----------------------------------------
