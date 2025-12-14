@@ -36,6 +36,7 @@ set(USER_INCLUDE_DIRECTORIES
 set(USER_COMPILE_SOURCES
 "xemac_adapter/xemac_adapter.c"
 "xemac_adapter/xemac_adapter_intf.c"
+"xemac_adapter/xemac_adapter_hw_intf.c"
 )
 
 # -----------------------------------------
