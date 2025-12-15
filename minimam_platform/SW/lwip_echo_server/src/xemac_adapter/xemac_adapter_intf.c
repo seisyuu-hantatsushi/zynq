@@ -6,18 +6,15 @@
 #include "lwipopts.h"
 #include "xlwipconfig.h"
 #include "lwip/opt.h"
-#include "lwip/def.h"
-#include "lwip/mem.h"
+
 #include "lwip/pbuf.h"
-#include "lwip/sys.h"
-#include "lwip/stats.h"
-#include "lwip/igmp.h"
 
 #include "netif/etharp.h"
 #include "netif/xadapter.h"
 #include "netif/xpqueue.h"
-#include "xscugic.h"
 
+#include "xemac_dma.h"
+#include "xemac_adapter_hw_intf.h"
 #include "xemac_adapter.h"
 
 err_t xemac_adapter_intf_init(struct netif *netif) {
@@ -26,7 +23,8 @@ err_t xemac_adapter_intf_init(struct netif *netif) {
     UINTPTR mac_baseaddr = (UINTPTR)(adapter_context->mac_regaddr);
     xemacpsif_s *xemacpsif = &adapter_context->xemacpsif;
     s32_t status = XST_SUCCESS;
-
+    UINTPTR dmacrreg;
+    
     memcpy(&netif->hwaddr[0], &adapter_context->macaddr[0], 6);
     
     xemacpsif->send_q = NULL;
@@ -84,8 +82,33 @@ err_t xemac_adapter_intf_init(struct netif *netif) {
     }
     
     /* initialize the mac */
-    hw_intf_init_emacps(xemacpsif, netif);    
+    hw_intf_init_emacps(xemacpsif, netif);
 
+    dmacrreg = XEmacPs_ReadReg(xemacpsif->emacps.Config.BaseAddress,
+                               XEMACPS_DMACR_OFFSET);
+    dmacrreg = dmacrreg | (0x00000010UL);
+    XEmacPs_WriteReg(xemacpsif->emacps.Config.BaseAddress,
+                     XEMACPS_DMACR_OFFSET, dmacrreg);
+#if !NO_SYS
+#if defined(__arm__) && !defined(ARMR5)
+    /* Freertos tick is 10ms by default; set period to the same */
+    xemac->xTimer = xTimerCreate("Timer", 10, pdTRUE, ( void * ) 1, vTimerCallback);
+    if (xemac->xTimer == NULL) {
+        LWIP_DEBUGF(NETIF_DEBUG, ("In %s:Timer creation failed....\r\n", __func__));
+    } else {
+        if(xTimerStart(xemac->xTimer, 0) != pdPASS) {
+            LWIP_DEBUGF(NETIF_DEBUG, ("In %s:Timer start failed....\r\n", __func__));
+        }
+    }
+#endif
+#endif
+
+    hw_intf_setup_isr(adapter_context);
+    hw_intf_init_dma(adapter_context);
+    start_emacps(xemacpsif);
+
+    adapter_context->netif = netif;
+    
     return ERR_OK;
 }
 

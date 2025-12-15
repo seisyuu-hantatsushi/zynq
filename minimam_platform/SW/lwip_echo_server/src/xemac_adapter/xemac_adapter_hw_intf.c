@@ -2,6 +2,7 @@
 #include "netif/xemacpsif.h"
 #include "xemac_adapter.h"
 #include "xemac_adapter_phy.h"
+#include "xemac_dma.h"
 #include "xemac_adapter_hw_intf.h"
 
 extern XEmacPs_Config XEmacPs_ConfigTable[];
@@ -70,25 +71,43 @@ void hw_intf_init_emacps(xemacpsif_s *xemacps, struct netif *netif)
     if (xemacpsp->Config.BaseAddress == XPAR_XEMACPS_0_BASEADDR) {
         if (phymapemac0[adapter_context->phy.phyaddr] == TRUE) {
             MacConfig_SgmiiPcs(xemacpsp,adapter_context->phy.phyaddr);
-            adapter_context->phy.link_speed = phy_setup_emacps(xemacpsp, adapter_context->phy.phyaddr);
+            if (adapter_context->phy.phy_setup != NULL) {
+                adapter_context->phy.phy_setup(xemacpsp, adapter_context->phy.phyaddr);
+            }              
+            //adapter_context->phy.link_speed = phy_setup_emacps(xemacpsp, adapter_context->phy.phyaddr);
+            adapter_context->phy.link_speed = xemac_adapter_setup_phy(xemacpsp, adapter_context->phy.phyaddr, adapter_context);
             phyfoundforemac0 = TRUE;
             phyaddrforemac = adapter_context->phy.phyaddr;
-            }
+        }
     } else {
         if (phymapemac1[adapter_context->phy.phyaddr] == TRUE) {
-            MacConfig_SgmiiPcs(xemacpsp,adapter_context->phy.phyaddr);
-            adapter_context->phy.link_speed = phy_setup_emacps(xemacpsp, adapter_context->phy.phyaddr);
+            MacConfig_SgmiiPcs(xemacpsp, adapter_context->phy.phyaddr);
+            if (adapter_context->phy.phy_setup != NULL) {
+                adapter_context->phy.phy_setup(xemacpsp, adapter_context->phy.phyaddr);
+            }
+            adapter_context->phy.link_speed = xemac_adapter_setup_phy(xemacpsp, adapter_context->phy.phyaddr, adapter_context);            
+            //adapter_context->phy.link_speed = phy_setup_emacps(xemacpsp, adapter_context->phy.phyaddr);
             phyfoundforemac1 = TRUE;
             phyaddrforemac = adapter_context->phy.phyaddr;
         }
     }
     /* If no PHY was detected, use broadcast PHY address of 0 */
     if (xemacpsp->Config.BaseAddress == XPAR_XEMACPS_0_BASEADDR) {
-        if (phyfoundforemac0 == FALSE)
-            adapter_context->phy.link_speed = phy_setup_emacps(xemacpsp, 0);
+        if (phyfoundforemac0 == FALSE) {
+            if (adapter_context->phy.phy_setup != NULL) {
+                adapter_context->phy.phy_setup(xemacpsp, adapter_context->phy.phyaddr);
+            }
+            // adapter_context->phy.link_speed = phy_setup_emacps(xemacpsp, 0);
+            adapter_context->phy.link_speed = xemac_adapter_setup_phy(xemacpsp, adapter_context->phy.phyaddr, adapter_context);           
+        }            
     } else {
-        if (phyfoundforemac1 == FALSE)
-            adapter_context->phy.link_speed = phy_setup_emacps(xemacpsp, 0);
+        if (phyfoundforemac1 == FALSE) {
+            if (adapter_context->phy.phy_setup != NULL) {
+                adapter_context->phy.phy_setup(xemacpsp, adapter_context->phy.phyaddr);
+            }
+            // adapter_context->phy.link_speed = phy_setup_emacps(xemacpsp, 0);
+            adapter_context->phy.link_speed = xemac_adapter_setup_phy(xemacpsp, adapter_context->phy.phyaddr, adapter_context);                       
+        }          
     }
 #else
     link_speed = pcs_setup_emacps(xemacpsp);
@@ -132,4 +151,83 @@ void hw_intf_init_emacps_on_error (xemacpsif_s *xemacps, struct netif *netif)
         volatile s32_t wait;
         for (wait=0; wait < 20000; wait++);
     }
+}
+
+void hw_intf_setup_isr(struct xemac_adapter_context *adapter) {
+    /*
+     * Setup callbacks
+     */
+    xemacpsif_s* xemacpsif = &adapter->xemacpsif;
+    XEmacPs_SetHandler(&xemacpsif->emacps, XEMACPS_HANDLER_DMASEND,
+                       (void *)emacps_dma_send_handler,
+                       (void *)adapter);
+
+    XEmacPs_SetHandler(&xemacpsif->emacps, XEMACPS_HANDLER_DMARECV,
+                       (void *)emacps_dma_recv_handler,
+                       (void *)adapter);
+
+    XEmacPs_SetHandler(&xemacpsif->emacps, XEMACPS_HANDLER_ERROR,
+                       (void *)hw_intf_error_handler,
+                       (void *)adapter);
+    return;
+}
+
+void hw_intf_error_handler(void *arg, u8 Direction, u32 ErrorWord)
+{
+    struct xemac_adapter_context *adapter = (struct xemac_adapter_context *)(arg);
+    xemacpsif_s* xemacpsif = &adapter->xemacpsif;
+    XEmacPs_BdRing *rxring;
+    XEmacPs_BdRing *txring;
+#if !NO_SYS
+    xInsideISR++;
+#endif
+
+    rxring = &XEmacPs_GetRxRing(&xemacpsif->emacps);
+    txring = &XEmacPs_GetTxRing(&xemacpsif->emacps);
+    
+    if (ErrorWord != 0) {
+        switch (Direction) {
+        case XEMACPS_RECV:
+            if (ErrorWord & XEMACPS_RXSR_HRESPNOK_MASK) {
+                LWIP_DEBUGF(NETIF_DEBUG, ("Receive DMA error\r\n"));
+                //HandleEmacPsError(xemac);
+            }
+            if (ErrorWord & XEMACPS_RXSR_RXOVR_MASK) {
+                LWIP_DEBUGF(NETIF_DEBUG, ("Receive over run\r\n"));
+                emacps_recv_handler(arg);
+                setup_rx_bds(xemacpsif, rxring);
+            }
+            if (ErrorWord & XEMACPS_RXSR_BUFFNA_MASK) {
+                LWIP_DEBUGF(NETIF_DEBUG, ("Receive buffer not available\r\n"));
+                emacps_recv_handler(arg);
+                setup_rx_bds(xemacpsif, rxring);
+            }
+            break;
+        case XEMACPS_SEND:
+            if (ErrorWord & XEMACPS_TXSR_HRESPNOK_MASK) {
+                LWIP_DEBUGF(NETIF_DEBUG, ("Transmit DMA error\r\n"));
+                //HandleEmacPsError(xemac);
+            }
+            if (ErrorWord & XEMACPS_TXSR_URUN_MASK) {
+                LWIP_DEBUGF(NETIF_DEBUG, ("Transmit under run\r\n"));
+                //HandleTxErrors(xemac);
+            }
+            if (ErrorWord & XEMACPS_TXSR_BUFEXH_MASK) {
+                LWIP_DEBUGF(NETIF_DEBUG, ("Transmit buffer exhausted\r\n"));
+                //HandleTxErrors(xemac);
+            }
+            if (ErrorWord & XEMACPS_TXSR_RXOVR_MASK) {
+                LWIP_DEBUGF(NETIF_DEBUG, ("Transmit retry excessed limits\r\n"));
+                //HandleTxErrors(xemac);
+            }
+            if (ErrorWord & XEMACPS_TXSR_FRAMERX_MASK) {
+                LWIP_DEBUGF(NETIF_DEBUG, ("Transmit collision\r\n"));
+                xemacps_process_sent_bds(xemacpsif, txring);
+            }
+            break;
+        }
+    }
+#if !NO_SYS
+    xInsideISR--;
+#endif
 }

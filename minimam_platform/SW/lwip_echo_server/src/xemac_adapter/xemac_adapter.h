@@ -8,7 +8,8 @@
 struct xemac_adapter_phy {
     uint32_t phyaddr;
     uint32_t link_speed;
-    
+    err_t (*phy_setup)(XEmacPs *xemacpsp, uint32_t phyaddr);
+    uint32_t (*phy_link_speed)(XEmacPs *xemacpsp, uint32_t phyaddr);
 };
 
 struct xemac_adapter_context {
