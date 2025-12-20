@@ -15,6 +15,7 @@ struct xemac_adapter_phy {
 struct xemac_adapter_context {
     struct netif *netif;
     struct xemac_adapter_phy phy;
+    enum xemac_types emac_type;    
     uint8_t macaddr[6];
     void *mac_regaddr;
     xemacpsif_s xemacpsif;
@@ -28,5 +29,6 @@ struct xemac_adapter_context {
 };
 
 err_t xemac_adapter_init(struct netif *netif);
+int32_t xemac_adapter_input(struct netif *netif);
 
 #endif /* _XEMAC_ADAPTER_H_ */

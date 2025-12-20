@@ -22,6 +22,8 @@
 #include "lwip/ethip6.h"
 #endif
 
+#include "xil_printf.h"
+
 #include "xemac_adapter_intf.h"
 #include "xemac_adapter.h"
 
@@ -39,12 +41,11 @@
  */
 
 static err_t  xemac_adapter_output(struct netif *netif, struct pbuf *p,
-			      const ip_addr_t *ipaddr)
+                                   const ip_addr_t *ipaddr)
 {
     /* resolve hardware address, then send (or queue) packet */
-    return etharp_output(netif, p, ipaddr);
+     return etharp_output(netif, p, ipaddr);
 }
-
 
 err_t xemac_adapter_init(struct netif *netif){
 
@@ -76,3 +77,20 @@ err_t xemac_adapter_init(struct netif *netif){
     return ERR_OK;  
 
 }
+
+int32_t xemac_adapter_input(struct netif *netif){
+    struct xemac_adapter_context *adapter_context =
+        (struct xemac_adapter_context *)netif->state;
+    int n_packets = 0;
+    
+    switch (adapter_context->emac_type) {
+    case xemac_type_emacps:
+        n_packets = xemac_adapter_intf_input(netif);
+        break;
+    default:
+        xil_printf("incorrect configuration: unknown temac type");
+        while(1);
+        return 0;
+    }
+    return n_packets;  
+}    

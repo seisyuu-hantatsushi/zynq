@@ -5,6 +5,8 @@
 #include "xemac_dma.h"
 #include "xemac_adapter_hw_intf.h"
 
+#include "xil_printf.h"
+
 extern XEmacPs_Config XEmacPs_ConfigTable[];
 extern u32_t phymapemac0[32];
 extern u32_t phymapemac1[32];
@@ -230,4 +232,19 @@ void hw_intf_error_handler(void *arg, u8 Direction, u32 ErrorWord)
 #if !NO_SYS
     xInsideISR--;
 #endif
+}
+
+struct pbuf* hw_intf_input(struct xemac_adapter_context *adapter){
+    xemacpsif_s *xemacpsif = &adapter->xemacpsif;
+    struct pbuf *p = NULL;
+    
+    /* see if there is data to process */
+    if(pq_qlength(xemacpsif->recv_q) == 0){
+        return NULL;
+    }
+
+    /* return one packet from receive q */
+    p = (struct pbuf *)pq_dequeue(xemacpsif->recv_q);
+
+    return p;
 }

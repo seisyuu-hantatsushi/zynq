@@ -17,6 +17,53 @@
 #include "xemac_adapter_hw_intf.h"
 #include "xemac_adapter.h"
 
+/*
+ * this function is always called with interrupts off
+ * this function also assumes that there are available BD's
+ */
+#if LWIP_UDP_OPT_BLOCK_TX_TILL_COMPLETE
+static err_t _unbuffered_low_level_output(xemacpsif_s *xemacpsif,
+                                          struct pbuf *p, u32_t block_till_tx_complete, u32_t *to_block_index )
+#else
+static err_t _unbuffered_low_level_output(xemacpsif_s *xemacpsif,
+                                          struct pbuf *p)
+#endif
+{
+    XStatus status = 0;
+    err_t err = ERR_MEM;
+    
+#if ETH_PAD_SIZE
+    pbuf_header(p, -ETH_PAD_SIZE);	/* drop the padding word */
+#endif
+#if LWIP_UDP_OPT_BLOCK_TX_TILL_COMPLETE
+    if (block_till_tx_complete == 1) {
+        status = emacps_sgsend(xemacpsif, p, 1, to_block_index);
+    } else {
+        status = emacps_sgsend(xemacpsif, p, 0, to_block_index);
+    }
+#else
+    status = emacps_sgsend(xemacpsif, p);
+#endif
+    if (status != XST_SUCCESS) {
+#if LINK_STATS
+        lwip_stats.link.drop++;
+#endif
+    } else {
+        err = ERR_OK;
+    }
+    
+#if ETH_PAD_SIZE
+    pbuf_header(p, ETH_PAD_SIZE);	/* reclaim the padding word */
+#endif
+    
+#if LINK_STATS
+    lwip_stats.link.xmit++;
+#endif /* LINK_STATS */
+    
+    return err;
+    
+}
+
 err_t xemac_adapter_intf_init(struct netif *netif) {
     struct xemac_adapter_context *adapter_context =
         (struct xemac_adapter_context *)netif->state;
@@ -24,7 +71,8 @@ err_t xemac_adapter_intf_init(struct netif *netif) {
     xemacpsif_s *xemacpsif = &adapter_context->xemacpsif;
     s32_t status = XST_SUCCESS;
     UINTPTR dmacrreg;
-    
+
+    adapter_context->emac_type = xemac_type_emacps;
     memcpy(&netif->hwaddr[0], &adapter_context->macaddr[0], 6);
     
     xemacpsif->send_q = NULL;
@@ -113,20 +161,121 @@ err_t xemac_adapter_intf_init(struct netif *netif) {
 }
 
 err_t xemac_adapter_intf_output(struct netif *netif, struct pbuf *p) {
-    return ERR_OK;
+    struct xemac_adapter_context *adapter_context = (struct xemac_adapter_context *)netif->state;
+    err_t err = ERR_MEM;
+    s32_t freecnt;
+    XEmacPs_BdRing *txring;
+#if LWIP_UDP_OPT_BLOCK_TX_TILL_COMPLETE
+    u32_t notfifyblocksleepcntr;
+    u32_t to_block_index;
+#endif
+    xil_printf(" xemac_adapter_intf_output\r\n");
+
+    SYS_ARCH_DECL_PROTECT(lev);
+    xemacpsif_s *xemacpsif = (xemacpsif_s *)(&adapter_context->xemacpsif);
+    freecnt = xemacps_is_tx_space_available(xemacpsif);
+    SYS_ARCH_PROTECT(lev);
+    if (freecnt <= 5) {
+	txring = &(XEmacPs_GetTxRing(&xemacpsif->emacps));
+        xemacps_process_sent_bds(xemacpsif, txring);
+    }
+    if (xemacps_is_tx_space_available(xemacpsif)) {    
+#if LWIP_UDP_OPT_BLOCK_TX_TILL_COMPLETE
+        if (netif_is_opt_block_tx_set(netif, NETIF_ENABLE_BLOCKING_TX_FOR_PACKET)) {
+            err = _unbuffered_low_level_output(xemacpsif, p, 1, &to_block_index);
+        } else {
+            err = _unbuffered_low_level_output(xemacpsif, p, 0, &to_block_index);
+        }
+#else
+        err = _unbuffered_low_level_output(xemacpsif, p);
+#endif
+    } else {
+#if LINK_STATS
+        lwip_stats.link.drop++;
+#endif
+        xil_printf("pack dropped, no space\r\n");
+        SYS_ARCH_UNPROTECT(lev);
+        goto return_pack_dropped;
+    }
+    SYS_ARCH_UNPROTECT(lev);
+
+#if LWIP_UDP_OPT_BLOCK_TX_TILL_COMPLETE
+    if (netif_is_opt_block_tx_set(netif, NETIF_ENABLE_BLOCKING_TX_FOR_PACKET)) {
+        /* Wait for approx 1 second before timing out */
+        notfifyblocksleepcntr = 900000;
+        while(notifyinfo[to_block_index] == 1) {
+            usleep(1);
+            notfifyblocksleepcntr--;
+            if (notfifyblocksleepcntr <= 0) {
+                err = ERR_TIMEOUT;
+                break;
+            }
+        }
+    }
+    netif_clear_opt_block_tx(netif, NETIF_ENABLE_BLOCKING_TX_FOR_PACKET);
+#endif
+    
+return_pack_dropped:
+    return err;    
 }
 
-struct pbuf* xemac_adapter_intf_input(struct netif *netif)
-{
-    struct xemac_s *xemac = (struct xemac_s *)(netif->state);
-    xemacpsif_s *xemacpsif = (xemacpsif_s *)(xemac->state);
+int32_t xemac_adapter_intf_input(struct netif *netif){
+    struct xemac_adapter_context *adapter_context =
+        (struct xemac_adapter_context *)netif->state;
+    struct eth_hdr *ethhdr;
     struct pbuf *p;
+    SYS_ARCH_DECL_PROTECT(lev);
+
+#if !NO_SYS
+    while (1)
+#endif
+        {
+            /* move received packet into a new pbuf */
+            SYS_ARCH_PROTECT(lev);
+            p = hw_intf_input(adapter_context);
+            SYS_ARCH_UNPROTECT(lev);
+            
+            /* no packet could be read, silently ignore this */
+            if (p == NULL) {
+                return 0;
+            }
+            
+            /* points to packet payload, which starts with an Ethernet header */
+            ethhdr = p->payload;
+
+#if LINK_STATS
+            lwip_stats.link.recv++;
+#endif /* LINK_STATS */
+
+            switch (htons(ethhdr->type)) {
+                /* IP or ARP packet? */
+            case ETHTYPE_IP:
+            case ETHTYPE_ARP:
+#if LWIP_IPV6
+                /*IPv6 Packet?*/
+            case ETHTYPE_IPV6:
+#endif
+#if PPPOE_SUPPORT
+g                /* PPPoE packet? */
+            case ETHTYPE_PPPOEDISC:
+            case ETHTYPE_PPPOE:
+#endif /* PPPOE_SUPPORT */
+                /* full packet send to tcpip_thread to process */
+                if (netif->input(p, netif) != ERR_OK) {
+                    LWIP_DEBUGF(NETIF_DEBUG, ("xemacpsif_input: IP input error\r\n"));
+                    pbuf_free(p);
+                    p = NULL;
+                }
+                break;
+                
+            default:
+                pbuf_free(p);
+                p = NULL;
+                break;
+            }
+	}
     
-    /* see if there is data to process */
-    if (pq_qlength(xemacpsif->recv_q) == 0)
-        return NULL;
-    
-    /* return one packet from receive q */
-    p = (struct pbuf *)pq_dequeue(xemacpsif->recv_q);
-    return p;
+    return 1;
+
 }
+
