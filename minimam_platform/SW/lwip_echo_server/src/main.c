@@ -29,6 +29,7 @@
 
 #include <stdio.h>
 
+#include "lwip/def.h"
 #include "lwip/netif.h"
 #include "xparameters.h"
 
@@ -111,6 +112,9 @@ void print_ip_settings(ip_addr_t *ip, ip_addr_t *mask, ip_addr_t *gw)
 
 /* the mac address of the board. this should be unique per board */
 #define MAC_ADDRESS { 0x00, 0x0a, 0x35, 0x00, 0x01, 0x02 }
+const static uint32_t default_ipv4_addr = LWIP_MAKEU32(192, 168, 10, 91);
+const static uint32_t default_ipv4_netmask = LWIP_MAKEU32(255, 255, 255, 0);
+const static uint32_t default_ipv4_gw = LWIP_MAKEU32(192, 168, 10, 1);
 
 int main()
 {
@@ -142,9 +146,9 @@ int main()
     netmask.addr = 0;
 #else
     /* initialize IP addresses to be used */
-    IP4_ADDR(&ipaddr,  192, 168,   1, 10);
-    IP4_ADDR(&netmask, 255, 255, 255,  0);
-    IP4_ADDR(&gw,      192, 168,   1,  1);
+    ip4_addr_set_u32(&ipaddr,  PP_HTONL(default_ipv4_addr));
+    ip4_addr_set_u32(&netmask, PP_HTONL(default_ipv4_netmask));
+    ip4_addr_set_u32(&gw,      PP_HTONL(default_ipv4_gw));
 #endif
 #endif
     print_app_header();
@@ -182,23 +186,25 @@ int main()
 #if (LWIP_IPV6 == 0)
 #if (LWIP_DHCP==1)
     /* Create a new DHCP client for this interface.
-     * Note: you must call dhcp_fine_tmr() and dhcp_coarse_tmr() at
+     * Note: you must call dhcp_fine_tmr() and dhcp_coarse_tmr() atxbg
      * the predefined regular intervals after starting the client.
      */
     dhcp_start(echo_netif);
     dhcp_timoutcntr = 240;
     
     while (((echo_netif->ip_addr.addr) == 0) && (dhcp_timoutcntr > 0)) {
-		xemacif_input(echo_netif);
+      // xemacif_input(echo_netif);
+        xemac_adapter_input(echo_netif);
     }
     
     if (dhcp_timoutcntr <= 0) {
-        if ((echo_netif->ip_addr.addr) == 0) {
+      if ((echo_netif->ip_addr.addr) == 0) {
+            ip4_addr_set_u32(&ipaddr,  PP_HTONL(default_ipv4_addr));
+            ip4_addr_set_u32(&netmask, PP_HTONL(default_ipv4_netmask));
+            ip4_addr_set_u32(&gw,      PP_HTONL(default_ipv4_gw));                    
             xil_printf("DHCP Timeout\r\n");
-            xil_printf("Configuring default IP of 192.168.1.10\r\n");
-            IP4_ADDR(&(echo_netif->ip_addr),  192, 168,   1, 10);
-            IP4_ADDR(&(echo_netif->netmask), 255, 255, 255,  0);
-            IP4_ADDR(&(echo_netif->gw),      192, 168,   1,  1);
+            xil_printf("Configuring default IP of %d.%d.%d.%d.\r\n",
+                       ip4_addr1_val(ipaddr), ip4_addr2_val(ipaddr), ip4_addr3_val(ipaddr), ip4_addr4_val(ipaddr));
         }
     }
     
@@ -223,7 +229,7 @@ int main()
             tcp_slowtmr();
             TcpSlowTmrFlag = 0;
         }
-        xemacif_input(echo_netif);
+        xemac_adapter_input(echo_netif);
         transfer_data();
     }
 
