@@ -27,6 +27,7 @@ set(USER_UNDEFINED_SYMBOLS
 # Example 3: Adding ${CMAKE_SOURCE_DIR}/data/include to add data/include from this project.
 
 set(USER_INCLUDE_DIRECTORIES
+"../../minimam_platform/zynq_fsbl/zynq_fsbl_bsp/include"
 )
 
 #Add any source below, they will be added as Compile sources.
@@ -122,12 +123,14 @@ set(USER_LINK_OMIT_ALL_SYMBOL_INFO )
 # Add any libraries to be linked below, they will be added as extra libraries.
 # User needs to update USER_LINK_DIRECTORIES below with these library search paths.
 set(USER_LINK_LIBRARIES
+"xilffs"
 )
 
 # Add any directories to look for the libraries to be linked.
 # Example 1: Adding /proj/compression/lib will pass -L/proj/compression/lib to the linker.
 # Example 2: Adding ../../common/lib will consider the path as relative to this directory and will pass the path to -L option.
 set(USER_LINK_DIRECTORIES
+"../../minimam_platform/zynq_fsbl/zynq_fsbl_bsp/lib"
 )
 
 # -----------------------------------------
