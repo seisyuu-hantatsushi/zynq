@@ -525,8 +525,6 @@ void emacps_dma_recv_handler(void *arg)
     u32_t index;
     u32_t gigeversion;
 
-    xil_printf("emacps_dma_recv_handler()\r\n");
-
     struct xemac_adapter_context *adapter_context =
         (struct xemac_adapter_context *)arg;
     xemacpsif = (xemacpsif_s *)(&adapter_context->xemacpsif);
