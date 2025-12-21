@@ -35,7 +35,7 @@
 proc checkRequiredFiles { origin_dir} {
   set status true
   set files [list \
- "[file normalize "$origin_dir/../src/utils_1/imports/synth_1/design_1_wrapper.dcp"]"\
+ "[file normalize "$origin_dir/src/utils_1/imports/synth_1/design_1_wrapper.dcp"]"\
   ]
   foreach ifile $files {
     if { ![file isfile $ifile] } {
@@ -205,7 +205,7 @@ set_property -name "top_lib" -value "xil_defaultlib" -objects $obj
 set obj [get_filesets utils_1]
 # Import local files from the original project
 set files [list \
- [file normalize "${origin_dir}/../src/utils_1/imports/synth_1/design_1_wrapper.dcp" ]\
+ [file normalize "${origin_dir}/src/utils_1/imports/synth_1/design_1_wrapper.dcp" ]\
 ]
 set imported_files ""
 foreach f $files {
@@ -600,7 +600,7 @@ set_property SYNTH_CHECKPOINT_MODE "Hierarchical" [get_files design_1.bd ]
 
 #call make_wrapper to create wrapper files
 if { [get_property IS_LOCKED [ get_files -norecurse [list design_1.bd]] ] == 1  } {
-  import_files -fileset sources_1 [file normalize "${origin_dir}/../bd/design_1/hdl/design_1_wrapper.v" ]
+  import_files -fileset sources_1 [file normalize "${origin_dir}/bd/design_1/hdl/design_1_wrapper.v" ]
 } else {
   set wrapper_path [make_wrapper -fileset sources_1 -files [ get_files -norecurse [list design_1.bd]] -top]
   add_files -norecurse -fileset sources_1 $wrapper_path
