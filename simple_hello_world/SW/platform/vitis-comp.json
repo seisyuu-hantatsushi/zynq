@@ -21,28 +21,7 @@
       "linux"
     ],
     "supportedFamily": "zynq",
-    "stdGenHookList": [
-      {
-        "key": "VITIS_SDT_REPO",
-        "value": ""
-      },
-      {
-        "key": "VITIS_SDT_BOARD_DTS",
-        "value": ""
-      },
-      {
-        "key": "VITIS_SDT_INCLUDE_DTS",
-        "value": ""
-      },
-      {
-        "key": "-dt_overlay",
-        "value": "0"
-      },
-      {
-        "key": "custom_dtsi",
-        "value": ""
-      }
-    ],
+    "stdGenHookList": [],
     "componentType": "PLATFORM",
     "domains": [
       {
