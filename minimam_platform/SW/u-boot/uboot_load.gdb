@@ -22,7 +22,11 @@ monitor halt
 
 # ---- Bitstream (optional) ----
 # Uncomment if you want to load bitstream via OpenOCD
-# monitor pld load 0 ./minimam_platform.bit
+monitor pld load 0 ./minimam_platform.bit
+
+
+# -- load Device Tree Binary
+restore ./u-boot.dtb binary 0x100000
 
 # ---- U-Boot ----
 # Update this path to your U-Boot ELF
