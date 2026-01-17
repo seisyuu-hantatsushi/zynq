@@ -30,7 +30,9 @@ restore ./u-boot.dtb binary 0x100000
 
 # ---- U-Boot ----
 # Update this path to your U-Boot ELF
-file ./u-boot
+# u-boot has debug symbol
+#file ./u-boot
+file ./u-boot.elf 
 load
 
 # Set entry address from ELF symbol (uses _start)
