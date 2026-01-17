@@ -1,0 +1,6 @@
+the_ROM_images:{
+  [bootloader] ./fsbl.elf
+  ./minimam_platform.bit
+  ./u-boot.elf
+  [load=0x00100000]u-boot.dtb
+}
