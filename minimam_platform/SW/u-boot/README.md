@@ -101,7 +101,8 @@
 	90	#endif /* !defined(CONFIG_ENABLE_ARM_SOC_BOOT0_HOOK) */
 	91	
 	92	#if !CONFIG
-	```
+```
+
 ## prepare bootable sd card.
 1. make "boot.bin"  
    `bootgen -arch zynq -image example_for_zynq.bif -o i boot.bin -w`
