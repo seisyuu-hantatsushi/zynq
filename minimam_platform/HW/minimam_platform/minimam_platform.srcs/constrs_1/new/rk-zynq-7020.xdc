@@ -1,8 +1,3 @@
-set_property PACKAGE_PIN V12 [get_ports UART_1_rxd]
-set_property PACKAGE_PIN W12 [get_ports UART_1_txd]
-set_property IOSTANDARD LVCMOS33 [get_ports UART_1_rxd]
-set_property IOSTANDARD LVCMOS33 [get_ports UART_1_txd]
-
 set_property IOSTANDARD LVCMOS33 [get_ports CAN_0_1_rx]
 set_property IOSTANDARD LVCMOS33 [get_ports CAN_0_1_tx]
 set_property IOSTANDARD LVCMOS33 [get_ports CAN_1_2_rx]
