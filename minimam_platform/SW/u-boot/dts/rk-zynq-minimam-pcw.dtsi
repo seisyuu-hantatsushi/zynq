@@ -158,19 +158,6 @@
 		status = "okay";
 		xlnx,enet-slcr-100mbps-div1 = <5>;
 		xlnx,name = "ps7_ethernet_0";
-		phy-handle = <&phy0>;
-		mdio {
-			#address-cells = <1>;
-			#size-cells = <0>;
-			
-			phy0: ethernet-phy@1 {
-				/* PHYAD = 1 の例。基板の設定に合わせる */
-				reg = <1>;
-				
-				/* RTL8211F はこの PHY ID 互換がよく使われる */
-				compatible = "ethernet-phy-id001c.c916";
-			};
-		};
 	};
 	&usb0 {
 		xlnx,usb-reset = "MIO , 13";
@@ -207,6 +194,28 @@
 		xlnx,ip-name = "ps7_i2c";
 		xlnx,name = "ps7_i2c_0";
 	};
+	&can0 {
+		status = "okay";
+		xlnx,can-clk-freq-hz = <100000000>;
+		xlnx,ip-name = "ps7_can";
+		xlnx,name = "ps7_can_0";
+	};
+	&spi0 {
+		status = "okay";
+		xlnx,has-ss0 = <1>;
+		xlnx,ip-name = "ps7_spi";
+		xlnx,has-ss1 = <1>;
+		num-cs = <3>;
+		xlnx,spi-clk-freq-hz = <166666672>;
+		xlnx,has-ss2 = <1>;
+		xlnx,name = "ps7_spi_0";
+	};
+	&can1 {
+		status = "okay";
+		xlnx,can-clk-freq-hz = <100000000>;
+		xlnx,ip-name = "ps7_can";
+		xlnx,name = "ps7_can_1";
+	};
 	&ttc0 {
 		xlnx,ttc-clk2-freq-hz = <111111115>;
 		xlnx,ttc-clk1-clksrc = <0>;
@@ -223,10 +232,10 @@
 		xlnx,mio-gpio-mask = <0x5600>;
 		status = "okay";
 		gpio-mask-high = <0>;
-		xlnx,emio-gpio-width = <64>;
+		xlnx,emio-gpio-width = <3>;
 		xlnx,ip-name = "ps7_gpio";
 		gpio-mask-low = <22016>;
-		emio-gpio-width = <0x40>;
+		emio-gpio-width = <0x3>;
 		xlnx,name = "ps7_gpio_0";
 	};
 	&mc {
