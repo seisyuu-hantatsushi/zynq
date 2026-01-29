@@ -1,0 +1,62 @@
+/dts-v1/;
+
+/ {
+    description = "Zynq-7000 FIT: zImage + DTB + initramfs(cpio)";
+    #address-cells = <1>;
+
+    images {
+        kernel {
+            description = "Linux zImage";
+            data = /incbin/("images/zImage");
+            type = "kernel";
+            arch = "arm";
+            os = "linux";
+            compression = "none";
+            load = <0x02000000>;     /* safe < 0x30000000 */
+            entry = <0x02000000>;
+            hash-1 {
+                algo = "sha256";
+            };
+        };
+
+        fdt {
+            description = "Device Tree Blob";
+            data = /incbin/("images/system.dtb");
+            type = "flat_dt";
+            arch = "arm";
+            compression = "none";
+            load = <0x01000000>;     /* safe < 0x30000000 */
+            hash-1 {
+                algo = "sha256";
+            };
+        };
+
+        ramdisk {
+            description = "initramfs rootfs.cpio.gz";
+            data = /incbin/("images/rootfs.cpio.gz");
+            type = "ramdisk";
+            arch = "arm";
+            os = "linux";
+            compression = "gzip";
+            load = <0x04000000>;     /* safe < 0x30000000 */
+            hash-1 {
+                algo = "sha256";
+            };
+        };
+    };
+
+    configurations {
+        default = "initramfs root";
+
+        conf-1 {
+            description = "Boot zImage + DTB + initramfs";
+            kernel = "kernel";
+            fdt = "fdt";
+            ramdisk = "ramdisk";
+
+            hash-1 {
+                algo = "sha256";
+            };
+        };
+    };
+};
