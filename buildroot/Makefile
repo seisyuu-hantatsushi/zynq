@@ -21,6 +21,9 @@ sdcard_img: outputs/sdcard.img
 ramroot_img: images/boot.bin ./images/zImage ./images/system.dtb images/rootfs.cpio.gz ramroot_boot.cmd
 	PATH=$(UBOOT_TOOLS_PATH):$$PATH mkimage -A arm -T script -C none -n "Zynq boot" -d ramroot_boot.cmd images/boot.scr
 
+itb_img: images/image.itb itb_boot.cmd
+	PATH=$(UBOOT_TOOLS_PATH):$$PATH mkimage -A arm -T script -C none -n "Zynq boot" -d itb_boot.cmd images/boot.scr
+
 outputs/sdcard.img: images/boot.bin images/zImage images/rootfs.ext2 images/system.dtb images/boot.scr sdcardimg.cfg 
 	PATH=$(BUILDROOT_HOST_TOOLS_PATH):$$PATH genimage --inputpath ./images --outputpath ./outputs --rootpath $(ROOTFS_PATH) --config ./sdcardimg.cfg
 
@@ -50,6 +53,10 @@ images/uRamdisk: images images/rootfs.ext2.gz
 
 images/rootfs.cpio.gz: images $(ROOTFS_CPIO_SRC)
 	gzip -c $(ROOTFS_CPIO_SRC) > ./images/rootfs.cpio.gz
+
+images/image.itb: images images/zImage images/rootfs.cpio.gz images/system.dtb image.its
+	PATH=$(UBOOT_TOOLS_PATH):$$PATH mkimage -f image.its images/image.itb
+
 
 boot.bin: fsbl.elf bitstream.bit u-boot.elf u-boot.dtb boot.bif
 	bootgen -arch zynq -image boot.bif -o $@ -w
