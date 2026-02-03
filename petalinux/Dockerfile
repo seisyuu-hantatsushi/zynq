@@ -12,15 +12,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     xterm autoconf libtool less bc texinfo zlib1g-dev \
     gcc-multilib lsb-release build-essential \
     bash coreutils diffstat chrpath socat cpio \
+    tmux \
     gawk wget git rsync \
+    dnsutils \
     xz-utils zstd \
     python3 python3-pexpect python3-pip python3-jinja2 \
     file locales pax iproute2 unzip tar ca-certificates \
     libtinfo6 libncurses5 libncursesw5 libncurses-dev \
     libssl-dev \
+    u-boot-tools \
     && rm -rf /var/lib/apt/lists/*
 
 RUN locale-gen en_US.UTF-8
+
+RUN ln -sf /bin/bash /bin/sh
 
 RUN groupadd -g ${GID} ${USER} \
  && useradd -m -u ${UID} -g ${GID} -s /bin/bash ${USER}
@@ -37,5 +42,6 @@ USER ${USER}
 RUN /home/${USER}/petalinux-*.run -y -d /home/${USER}/petalinux
 
 RUN echo 'source ~/petalinux/settings.sh' >> ~/.bashrc
+RUN echo 'export PATH="$PETALINUX/tools/xsct/bin:$PATH"' >> ~/.bashrc
 
 WORKDIR /work
